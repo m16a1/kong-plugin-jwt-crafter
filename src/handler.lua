@@ -24,9 +24,8 @@ local function fetch_acls(consumer_id)
   return results
 end
 
-local function load_credential(consumer_id)
-  -- Only HS256 is now supported, probably easy to add more if needed
-  local rows, err = singletons.dao.jwt_secrets:find_all {consumer_id = consumer_id, algorithm = "HS256"}
+local function load_credential(consumer_id, algorithm)
+  local rows, err = singletons.dao.jwt_secrets:find_all {consumer_id = consumer_id, algorithm = algorithm}
   if err then
     return nil, err
   end
@@ -58,7 +57,7 @@ function JwtCrafter:access(config)
   end
 
   -- Fetch JWT secret for signing
-  local credential, err = load_credential(consumer_id)
+  local credential, err = load_credential(consumer_id, config.algorithm)
 
   if err then
     return responses.send_HTTP_INTERNAL_SERVER_ERROR(err)
@@ -73,7 +72,7 @@ function JwtCrafter:access(config)
     {
       header = {
         typ = "JWT",
-        alg = "HS256" -- load_credential only loads HS256 for now
+        alg = config.algorithm
       },
       payload = {
         sub = ngx.ctx.authenticated_consumer.id,
